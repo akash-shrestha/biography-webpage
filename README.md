@@ -1,4 +1,4 @@
 # Introduction
 
 A static webpage site with the biography of Dr. Norman Borlaug  
-It was deployed using CI/CD
+Also contains some devops codes as it was deployed using CI/CD
