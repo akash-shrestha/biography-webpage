@@ -1,0 +1,30 @@
+version: "3.7"
+
+networks:
+  dzlab-public:
+    external: true
+
+services:
+  app:
+    deploy:
+      labels:
+        - "traefik.docker.network= dzlab-public"
+        - "traefik.enable=true"
+        - "traefik.http.routers.sandbox-akash-web-http.entrypoints=web"
+        - "traefik.http.routers.sandbox-akash-web-http.middlewares=https-redirect"
+        - "traefik.http.routers.sandbox-akash-web-http.rule=Host(`akash-web.sandbox. dzhq.org`)"
+        - "traefik.http.routers.sandbox-akash-web-https.entrypoints=websecure"
+        - "traefik.http.routers.sandbox-akash-web-https.rule=Host(`akash-web.sandbox. dzhq.org`)"
+        - "traefik.http.routers.sandbox-akash-web-https.tls.certresolver=le"
+        - "traefik.http.routers.sandbox-akash-web-https.tls.domains[0].main=akash-web.sandbox. dzhq.org"
+        - "traefik.http.routers.sandbox-akash-web-https.tls=true"
+        - "traefik.http.services.sandbox-akash-web.loadbalancer.server.port=80"
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 500M
+      restart_policy:
+        condition: on-failure
+    image: 139549850843.dkr.ecr.ap-southeast-1.amazonaws.com/sandbox/akash-web:0.1.develop
+    networks:
+      - dzlab-public

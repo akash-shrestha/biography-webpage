@@ -1,0 +1,65 @@
+stages:
+  - pre-build
+  - build
+  - deploy
+
+variables:
+  APP_SERVICE: sandbox-akash-web_app
+  DOMAIN_DEVELOP: sandbox.dzhq.org
+  GIT_DEPTH: 1
+  IMAGE: 139549850843.dkr.ecr.ap-southeast-1.amazonaws.com/sandbox/akash-web
+  IMAGE_DEVELOP: $IMAGE:$CI_BUILD_REF_NAME.develop
+  TAG: "$VERSION.0"
+  VERSION: "0.1"
+
+quality:
+  environment: build
+  image: node:14-alpine
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+  script:
+    - npx prettier --list-different .
+  stage: pre-build
+  tags:
+    - docker
+
+develop_build:
+  environment: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"credsStore\":\"ecr-login\"}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --cache=true
+      --cache-repo=$IMAGE
+      --context $CI_PROJECT_DIR
+      --dockerfile $CI_PROJECT_DIR/deployment/Dockerfile
+      --destination $IMAGE_DEVELOP
+  stage: build
+  tags:
+    - docker
+
+develop_deploy:
+  environment:
+    name: develop
+    url: https://akash-web.$DOMAIN_DEVELOP
+  image: curlimages/curl
+  needs:
+    - job: develop_build
+      artifacts: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - 'curl --fail -X POST
+      --header "Accept: application/json"
+      --header "authorization: Bearer $SWARMPIT_TOKEN_DEVELOP"
+      "https://swarmpit.dzhq.org/api/services/$APP_SERVICE/redeploy"'
+  stage: deploy
+  tags:
+    - docker
+  variables:
+    GIT_STRATEGY: none
